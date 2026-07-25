@@ -1,4 +1,4 @@
-package com.worldcoin.analyticsengine.core
+package com.worldcoin.analytics
 
 import kotlin.test.Test
 import kotlin.test.assertTrue

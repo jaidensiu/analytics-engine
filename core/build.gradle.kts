@@ -7,7 +7,7 @@ plugins {
     `maven-publish`
 }
 
-group = "com.worldcoin.analyticsengine"
+group = "com.worldcoin"
 version = providers.gradleProperty("libraryVersion").getOrElse("0.1.0-SNAPSHOT")
 
 kotlin {
@@ -29,7 +29,7 @@ kotlin {
     ).forEach { target ->
         target.binaries.framework {
             baseName = xcframeworkName
-            binaryOption("bundleId", "com.worldcoin.analyticsengine.core")
+            binaryOption("bundleId", "com.worldcoin.analytics")
             isStatic = true
             xcf.add(this)
         }
@@ -43,7 +43,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.worldcoin.analyticsengine.core"
+    namespace = "com.worldcoin.analytics"
     compileSdk = 35
 
     defaultConfig {

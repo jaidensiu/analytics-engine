@@ -1,4 +1,4 @@
-package com.worldcoin.analyticsengine.core
+package com.worldcoin.analytics
 
 /**
  * Returns a human-readable name of the platform this library is running on.
