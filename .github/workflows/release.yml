@@ -1,0 +1,124 @@
+name: Release
+
+# Publishes a new library version:
+#   - Android AAR (+ KMP root module) -> GitHub Packages Maven registry
+#   - iOS XCFramework zip             -> GitHub release asset, consumed via SPM
+#
+# Flow: tests -> publish Maven -> build XCFramework -> draft release with the
+# zip asset -> rewrite Package.swift with the asset URL/checksum -> commit to
+# master -> publish the release with the tag pointing at that commit, so SPM
+# resolves the tag to a Package.swift that references the matching binary.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 1.2.3, without the v prefix)"
+        required: true
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      VERSION: ${{ inputs.version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Validate version
+        run: |
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$'; then
+            echo "::error::'$VERSION' is not a valid semver version"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" > /dev/null 2>&1; then
+            echo "::error::Tag v$VERSION already exists"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Run all tests
+        run: ./gradlew build --stacktrace
+
+      - name: Publish Android artifacts to GitHub Packages
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./gradlew -PlibraryVersion="$VERSION" \
+            :core:publishAndroidReleasePublicationToGitHubPackagesRepository \
+            :core:publishKotlinMultiplatformPublicationToGitHubPackagesRepository \
+            --stacktrace
+
+      - name: Build XCFramework
+        run: ./gradlew -PlibraryVersion="$VERSION" :core:assembleAnalyticsEngineCoreReleaseXCFramework --stacktrace
+
+      - name: Zip XCFramework and compute checksum
+        id: package
+        run: |
+          cd core/build/XCFrameworks/release
+          ditto -c -k --sequesterRsrc --keepParent \
+            AnalyticsEngineCore.xcframework \
+            "AnalyticsEngineCore-$VERSION.xcframework.zip"
+          CHECKSUM=$(swift package compute-checksum "AnalyticsEngineCore-$VERSION.xcframework.zip")
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+          echo "zip_path=core/build/XCFrameworks/release/AnalyticsEngineCore-$VERSION.xcframework.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Create draft release and upload XCFramework
+        id: draft
+        run: |
+          RELEASE_ID=$(gh api "repos/$GITHUB_REPOSITORY/releases" \
+            -f tag_name="v$VERSION" \
+            -f name="v$VERSION" \
+            -F draft=true \
+            -f body="Android: \`com.worldcoin.analyticsengine:core:$VERSION\` via GitHub Packages. iOS: SPM binary target (see Package.swift at tag v$VERSION)." \
+            --jq .id)
+          ASSET_ID=$(gh api --method POST \
+            -H "Content-Type: application/zip" \
+            "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=AnalyticsEngineCore-$VERSION.xcframework.zip" \
+            --input "${{ steps.package.outputs.zip_path }}" \
+            --jq .id)
+          echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
+          echo "asset_id=$ASSET_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Update Package.swift and push to master
+        id: manifest
+        run: |
+          sed -i '' -E \
+            "s|url: \"[^\"]*\"|url: \"https://api.github.com/repos/$GITHUB_REPOSITORY/releases/assets/${{ steps.draft.outputs.asset_id }}.zip\"|" \
+            Package.swift
+          sed -i '' -E \
+            "s|checksum: \"[^\"]*\"|checksum: \"${{ steps.package.outputs.checksum }}\"|" \
+            Package.swift
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Package.swift
+          git commit -m "chore: release v$VERSION"
+          git push origin HEAD:master
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Publishing the draft creates tag v$VERSION at the commit that contains
+      # the updated Package.swift.
+      - name: Publish release
+        run: |
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/${{ steps.draft.outputs.release_id }}" \
+            -F draft=false \
+            -f target_commitish="${{ steps.manifest.outputs.sha }}"

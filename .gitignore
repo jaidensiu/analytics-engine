@@ -1,1 +1,8 @@
-*.idea/
+.idea/
+.gradle/
+.kotlin/
+build/
+local.properties
+.DS_Store
+*.xcframework
+xcuserdata/
