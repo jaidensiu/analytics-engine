@@ -6,7 +6,6 @@ on:
     branches: [ master ]
     paths:
       - VERSION
-  workflow_dispatch:
 
 concurrency:
   group: publish
@@ -19,9 +18,8 @@ permissions:
 jobs:
   publish:
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.pull_request.merged == true &&
-       startsWith(github.event.pull_request.head.ref, 'release/v'))
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/v')
     runs-on: macos-15
     timeout-minutes: 60
     env:
