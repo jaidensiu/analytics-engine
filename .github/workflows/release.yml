@@ -22,6 +22,7 @@ permissions:
 
 jobs:
   bump-version:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
