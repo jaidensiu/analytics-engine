@@ -1,7 +1,8 @@
 name: Publish
 
 on:
-  push:
+  pull_request:
+    types: [ closed ]
     branches: [ master ]
     paths:
       - VERSION
@@ -17,6 +18,10 @@ permissions:
 
 jobs:
   publish:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'release/v'))
     runs-on: macos-15
     timeout-minutes: 60
     env:
