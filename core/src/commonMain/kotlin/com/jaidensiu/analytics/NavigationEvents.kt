@@ -1,14 +1,13 @@
 package com.jaidensiu.analytics
 
-enum class Tab(val value: String) {
-    Home(value = "home"),
+enum class BottomNavTab(val value: String) {
     Apps(value = "apps"),
-    Wallet(value = "wallet"),
-    Contacts(value = "contacts"),
-    WorldId(value = "world_id"),
+    Credentials(value = "credentials"),
+    ForHumans(value = "for_humans"),
+    Notifications(value = "notifications"),
 }
 
-data class TabClicked(val tab: Tab) : AnalyticsEvent {
+data class TabClicked(val tab: BottomNavTab) : AnalyticsEvent {
     override val name get() = "tab_clicked"
     override val properties get() = mapOf<String, Any>("tab" to tab.value)
 }

@@ -18,9 +18,9 @@ class AnalyticsEngineTest {
         val sink = RecordingSink()
         val engine = AnalyticsEngine(sink)
 
-        engine.track(TabClicked(tab = Tab.Home))
+        engine.track(TabClicked(tab = BottomNavTab.ForHumans))
 
-        assertEquals(listOf("tab_clicked" to mapOf<String, Any>("tab" to "home")), sink.events)
+        assertEquals(listOf("tab_clicked" to mapOf<String, Any>("tab" to "for_humans")), sink.events)
     }
 
     @Test
@@ -32,7 +32,7 @@ class AnalyticsEngineTest {
             onError = { reported += it },
         )
 
-        engine.track(TabClicked(tab = Tab.Wallet))
+        engine.track(TabClicked(tab = BottomNavTab.Apps))
 
         assertEquals(listOf<Throwable>(failure), reported)
     }
