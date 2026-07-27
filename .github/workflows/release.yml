@@ -1,124 +1,95 @@
 name: Release
 
-# Publishes a new library version:
-#   - Android AAR (+ KMP root module) -> GitHub Packages Maven registry
-#   - iOS XCFramework zip             -> GitHub release asset, consumed via SPM
-#
-# Flow: tests -> publish Maven -> build XCFramework -> draft release with the
-# zip asset -> rewrite Package.swift with the asset URL/checksum -> commit to
-# master -> publish the release with the tag pointing at that commit, so SPM
-# resolves the tag to a Package.swift that references the matching binary.
-
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Release version (e.g. 1.2.3, without the v prefix)"
+      bump:
+        description: "Version part to bump"
         required: true
-        type: string
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 concurrency:
-  group: release
+  group: release-bump
   cancel-in-progress: false
 
 permissions:
   contents: write
-  packages: write
+  pull-requests: write
 
 jobs:
-  release:
-    runs-on: macos-15
-    timeout-minutes: 60
+  bump-version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
-      VERSION: ${{ inputs.version }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BUMP: ${{ inputs.bump }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: master
 
-      - name: Validate version
+      - name: Compute next version
+        id: version
         run: |
-          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$'; then
-            echo "::error::'$VERSION' is not a valid semver version"
+          set -euo pipefail
+          CURRENT=$(cat VERSION)
+          if ! echo "$CURRENT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::VERSION file contains '$CURRENT', which is not a plain semver (X.Y.Z)"
             exit 1
           fi
-          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" > /dev/null 2>&1; then
-            echo "::error::Tag v$VERSION already exists"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          case "$BUMP" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+            *) echo "::error::Unknown bump type '$BUMP'"; exit 1 ;;
+          esac
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/v$NEW_VERSION" > /dev/null 2>&1; then
+            echo "::error::Tag v$NEW_VERSION already exists"
             exit 1
           fi
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "next=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Run all tests
-        run: ./gradlew build --stacktrace
-
-      - name: Publish Android artifacts to GitHub Packages
-        env:
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Reserve release branch
+        id: branch
         run: |
-          ./gradlew -PlibraryVersion="$VERSION" \
-            :core:publishAndroidReleasePublicationToGitHubPackagesRepository \
-            :core:publishKotlinMultiplatformPublicationToGitHubPackagesRepository \
-            --stacktrace
+          set -euo pipefail
+          BRANCH="release/v${{ steps.version.outputs.next }}"
+          if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null 2>&1; then
+            echo "::error::Branch $BRANCH already exists -- a bump to this version may already be in flight"
+            exit 1
+          fi
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
 
-      - name: Build XCFramework
-        run: ./gradlew -PlibraryVersion="$VERSION" :core:assembleAnalyticsEngineReleaseXCFramework --stacktrace
-
-      - name: Zip XCFramework and compute checksum
-        id: package
+      - name: Bump VERSION and open PR
         run: |
-          cd core/build/XCFrameworks/release
-          ditto -c -k --sequesterRsrc --keepParent \
-            AnalyticsEngine.xcframework \
-            "AnalyticsEngine-$VERSION.xcframework.zip"
-          CHECKSUM=$(swift package compute-checksum "AnalyticsEngine-$VERSION.xcframework.zip")
-          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
-          echo "zip_path=core/build/XCFrameworks/release/AnalyticsEngine-$VERSION.xcframework.zip" >> "$GITHUB_OUTPUT"
-
-      - name: Create draft release and upload XCFramework
-        id: draft
-        run: |
-          RELEASE_ID=$(gh api "repos/$GITHUB_REPOSITORY/releases" \
-            -f tag_name="v$VERSION" \
-            -f name="v$VERSION" \
-            -F draft=true \
-            -f body="Android: \`com.jaidensiu:core:$VERSION\` via GitHub Packages. iOS: SPM binary target (see Package.swift at tag v$VERSION)." \
-            --jq .id)
-          ASSET_ID=$(gh api --method POST \
-            -H "Content-Type: application/zip" \
-            "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=AnalyticsEngine-$VERSION.xcframework.zip" \
-            --input "${{ steps.package.outputs.zip_path }}" \
-            --jq .id)
-          echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
-          echo "asset_id=$ASSET_ID" >> "$GITHUB_OUTPUT"
-
-      - name: Update Package.swift and push to master
-        id: manifest
-        run: |
-          sed -i '' -E \
-            "s|url: \"[^\"]*\"|url: \"https://api.github.com/repos/$GITHUB_REPOSITORY/releases/assets/${{ steps.draft.outputs.asset_id }}.zip\"|" \
-            Package.swift
-          sed -i '' -E \
-            "s|checksum: \"[^\"]*\"|checksum: \"${{ steps.package.outputs.checksum }}\"|" \
-            Package.swift
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Package.swift
-          git commit -m "chore: release v$VERSION"
-          git push origin HEAD:master
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git checkout -b "${{ steps.branch.outputs.name }}"
+          echo "${{ steps.version.outputs.next }}" > VERSION
+          git add VERSION
+          git commit -m "chore: bump version to ${{ steps.version.outputs.next }}"
+          git push origin "${{ steps.branch.outputs.name }}"
 
-      # Publishing the draft creates tag v$VERSION at the commit that contains
-      # the updated Package.swift.
-      - name: Publish release
-        run: |
-          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/${{ steps.draft.outputs.release_id }}" \
-            -F draft=false \
-            -f target_commitish="${{ steps.manifest.outputs.sha }}"
+          CURRENT="${{ steps.version.outputs.current }}"
+          NEXT="${{ steps.version.outputs.next }}"
+          BODY=$(cat <<EOF
+          Bumps version \`$CURRENT\` -> \`$NEXT\` ($BUMP).
+
+          Merging this PR triggers the [Publish workflow](../../actions/workflows/publish.yml), which runs the test suite, publishes the Android artifacts to GitHub Packages, builds the iOS XCFramework, and cuts GitHub release \`v$NEXT\`.
+          EOF
+          )
+          gh pr create \
+            --base master \
+            --head "${{ steps.branch.outputs.name }}" \
+            --title "chore: release v$NEXT" \
+            --body "$BODY"
