@@ -72,3 +72,7 @@ publishing {
         }
     }
 }
+
+afterEvaluate {
+    (publishing.publications.getByName("androidRelease") as MavenPublication).artifactId = "analytics"
+}

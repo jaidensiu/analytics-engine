@@ -62,7 +62,6 @@ jobs:
         run: |
           ./gradlew -PlibraryVersion="$VERSION" \
             :core:publishAndroidReleasePublicationToGitHubPackagesRepository \
-            :core:publishKotlinMultiplatformPublicationToGitHubPackagesRepository \
             --stacktrace
 
       - name: Build XCFramework
@@ -86,7 +85,7 @@ jobs:
             -f tag_name="v$VERSION" \
             -f name="v$VERSION" \
             -F draft=true \
-            -f body="Android: \`com.jaidensiu:core:$VERSION\` via GitHub Packages. iOS: SPM binary target (see Package.swift at tag v$VERSION)." \
+            -f body="Android: \`com.jaidensiu:analytics:$VERSION\` via GitHub Packages. iOS: SPM binary target (see Package.swift at tag v$VERSION)." \
             --jq .id)
           ASSET_ID=$(gh api --method POST \
             -H "Content-Type: application/zip" \
