@@ -20,7 +20,7 @@ kotlin {
         }
     }
 
-    val xcframeworkName = "AnalyticsEngineCore"
+    val xcframeworkName = "AnalyticsEngine"
     val xcf = XCFramework(xcframeworkName)
     listOf(
         iosArm64(),

@@ -2,16 +2,16 @@
 import PackageDescription
 
 let package = Package(
-    name: "AnalyticsEngineCore",
+    name: "AnalyticsEngine",
     platforms: [
         .iOS(.v15)
     ],
     products: [
-        .library(name: "AnalyticsEngineCore", targets: ["AnalyticsEngineCore"])
+        .library(name: "AnalyticsEngine", targets: ["AnalyticsEngine"])
     ],
     targets: [
         .binaryTarget(
-            name: "AnalyticsEngineCore",
+            name: "AnalyticsEngine",
             url: "https://api.github.com/repos/jaidensiu/analytics-engine/releases/assets/ASSET_ID.zip",
             checksum: "CHECKSUM"
         )

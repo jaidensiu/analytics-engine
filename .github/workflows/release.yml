@@ -69,18 +69,18 @@ jobs:
             --stacktrace
 
       - name: Build XCFramework
-        run: ./gradlew -PlibraryVersion="$VERSION" :core:assembleAnalyticsEngineCoreReleaseXCFramework --stacktrace
+        run: ./gradlew -PlibraryVersion="$VERSION" :core:assembleAnalyticsEngineReleaseXCFramework --stacktrace
 
       - name: Zip XCFramework and compute checksum
         id: package
         run: |
           cd core/build/XCFrameworks/release
           ditto -c -k --sequesterRsrc --keepParent \
-            AnalyticsEngineCore.xcframework \
-            "AnalyticsEngineCore-$VERSION.xcframework.zip"
-          CHECKSUM=$(swift package compute-checksum "AnalyticsEngineCore-$VERSION.xcframework.zip")
+            AnalyticsEngine.xcframework \
+            "AnalyticsEngine-$VERSION.xcframework.zip"
+          CHECKSUM=$(swift package compute-checksum "AnalyticsEngine-$VERSION.xcframework.zip")
           echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
-          echo "zip_path=core/build/XCFrameworks/release/AnalyticsEngineCore-$VERSION.xcframework.zip" >> "$GITHUB_OUTPUT"
+          echo "zip_path=core/build/XCFrameworks/release/AnalyticsEngine-$VERSION.xcframework.zip" >> "$GITHUB_OUTPUT"
 
       - name: Create draft release and upload XCFramework
         id: draft
@@ -93,7 +93,7 @@ jobs:
             --jq .id)
           ASSET_ID=$(gh api --method POST \
             -H "Content-Type: application/zip" \
-            "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=AnalyticsEngineCore-$VERSION.xcframework.zip" \
+            "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=AnalyticsEngine-$VERSION.xcframework.zip" \
             --input "${{ steps.package.outputs.zip_path }}" \
             --jq .id)
           echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
