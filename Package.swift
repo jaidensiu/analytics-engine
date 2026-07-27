@@ -12,8 +12,8 @@ let package = Package(
     targets: [
         .binaryTarget(
             name: "AnalyticsEngine",
-            url: "https://api.github.com/repos/jaidensiu/analytics-engine/releases/assets/ASSET_ID.zip",
-            checksum: "CHECKSUM"
+            url: "https://api.github.com/repos/jaidensiu/analytics-engine/releases/assets/491703699.zip",
+            checksum: "a1832e7c19ba25cdbcc66e74cf24fbcde07a3e29b8049a340b15edfc7f55c9c1"
         )
     ]
 )
