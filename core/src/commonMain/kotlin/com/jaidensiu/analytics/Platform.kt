@@ -1,4 +1,4 @@
-package com.worldcoin.analytics
+package com.jaidensiu.analytics
 
 /**
  * Returns a human-readable name of the platform this library is running on.

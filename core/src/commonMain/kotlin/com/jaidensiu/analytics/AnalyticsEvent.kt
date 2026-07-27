@@ -1,4 +1,4 @@
-package com.worldcoin.analytics
+package com.jaidensiu.analytics
 
 sealed interface AnalyticsEvent {
     val name: String

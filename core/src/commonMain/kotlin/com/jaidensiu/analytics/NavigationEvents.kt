@@ -1,4 +1,4 @@
-package com.worldcoin.analytics
+package com.jaidensiu.analytics
 
 enum class Tab(val value: String) {
     Home(value = "home"),

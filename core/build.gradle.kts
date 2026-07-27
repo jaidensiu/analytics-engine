@@ -7,7 +7,7 @@ plugins {
     `maven-publish`
 }
 
-group = "com.worldcoin"
+group = "com.jaidensiu"
 version = providers.gradleProperty("libraryVersion").getOrElse("0.1.0-SNAPSHOT")
 
 kotlin {
@@ -29,7 +29,7 @@ kotlin {
     ).forEach { target ->
         target.binaries.framework {
             baseName = xcframeworkName
-            binaryOption("bundleId", "com.worldcoin.analytics")
+            binaryOption("bundleId", "com.jaidensiu.analytics")
             isStatic = true
             xcf.add(this)
         }
@@ -43,7 +43,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.worldcoin.analytics"
+    namespace = "com.jaidensiu.analytics"
     compileSdk = 35
 
     defaultConfig {
@@ -60,7 +60,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/worldcoin/analytics-engine")
+            url = uri("https://maven.pkg.github.com/jaidensiu/analytics-engine")
             credentials {
                 username = providers.gradleProperty("gpr.user")
                     .orElse(providers.environmentVariable("GITHUB_ACTOR"))

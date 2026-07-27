@@ -1,4 +1,4 @@
-package com.worldcoin.analytics
+package com.jaidensiu.analytics
 
 import kotlin.test.Test
 import kotlin.test.assertTrue

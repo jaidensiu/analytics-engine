@@ -12,7 +12,7 @@ let package = Package(
     targets: [
         .binaryTarget(
             name: "AnalyticsEngineCore",
-            url: "https://api.github.com/repos/worldcoin/analytics-engine/releases/assets/ASSET_ID.zip",
+            url: "https://api.github.com/repos/jaidensiu/analytics-engine/releases/assets/ASSET_ID.zip",
             checksum: "CHECKSUM"
         )
     ]
