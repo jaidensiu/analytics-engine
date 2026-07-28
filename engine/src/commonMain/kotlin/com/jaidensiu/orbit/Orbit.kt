@@ -54,6 +54,17 @@ class Orbit internal constructor(
     }
 
     fun track(event: AnalyticsEvent) {
+        if (event.name.isBlank()) {
+            val failure = DeliveryFailure(
+                destinationId = "*",
+                reason = "invalid event: blank name",
+                cause = null,
+                timestampMillis = clock.now().toEpochMilliseconds(),
+                dropped = true,
+            )
+            notifyListeners(failure)
+            return
+        }
         val envelope = event.toEnvelope(config = config, timestampMillis = clock.now().toEpochMilliseconds())
         scope.launch {
             for ((destination, queue) in destinationQueues) {

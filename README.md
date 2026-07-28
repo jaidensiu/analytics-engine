@@ -61,3 +61,15 @@ callback for the same reason, and bridges to a normal Swift trailing closure.
   bound for another.
 - Permanently rejected events (4xx) are dropped and reported via `addDeliveryFailureListener`, not
   silently discarded.
+- Events with a blank name are rejected before being queued, rather than shipped to the wire.
+- A flushed batch is sent as a single request to UEIS's `/v1/batch` endpoint, tagged with an
+  `Idempotency-Key` derived from the batch's queued event ids -- retrying the same undelivered batch
+  reuses the same key, so a retry after a partial-ack failure doesn't double-count downstream.
+
+## Payload
+
+Every event is sent as an `EventEnvelope`: `eventName`, `timestampMillis`, `properties`, the
+identity fields from `OrbitConfig` (`userId`, `deviceId`, `anonymousId`), and metadata resolved by
+the SDK itself -- `platform` (`"android"`/`"ios"`), `sdkVersion` and `catalogVersion` (both derived
+from this repo's `VERSION` file at build time), and `appVersion` (passed in via `OrbitConfig`, since
+the SDK has no visibility into the host app's own version).

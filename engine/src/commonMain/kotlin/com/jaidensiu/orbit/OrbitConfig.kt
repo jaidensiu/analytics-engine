@@ -11,6 +11,7 @@ data class OrbitConfig(
     val userId: String? = null,
     val deviceId: String? = null,
     val anonymousId: String? = null,
+    val appVersion: String? = null,
     val maxQueueSize: Int = 1_000,
     val maxEventAge: Duration = 24.hours,
     val batchSize: Int = 20,

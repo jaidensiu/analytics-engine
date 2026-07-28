@@ -5,6 +5,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
@@ -16,10 +17,14 @@ import kotlin.test.assertIs
 
 class UeisDestinationTest {
 
-    private fun clientRespondingWith(status: HttpStatusCode): HttpClient {
+    private fun clientRespondingWith(
+        status: HttpStatusCode,
+        onRequest: (HttpRequestData) -> Unit = {},
+    ): HttpClient {
         return HttpClient(MockEngine) {
             engine {
-                addHandler {
+                addHandler { request ->
+                    onRequest(request)
                     respond(
                         content = "{}",
                         status = status,
@@ -88,7 +93,7 @@ class UeisDestinationTest {
     }
 
     @Test
-    fun aRetryableFailureSkipsTheRemainingEventsInTheBatch() {
+    fun theWholeBatchSharesTheSingleRequestOutcome() {
         runTest {
             val destination = UeisDestination(
                 httpClient = clientRespondingWith(status = HttpStatusCode.InternalServerError),
@@ -101,6 +106,63 @@ class UeisDestinationTest {
 
             assertIs<DeliveryOutcome.RetryableFailure>(value = outcomes.getValue(key = "1"))
             assertIs<DeliveryOutcome.RetryableFailure>(value = outcomes.getValue(key = "2"))
+        }
+    }
+
+    @Test
+    fun emptyBatchSendsNoRequestAndReturnsNoOutcomes() {
+        runTest {
+            var requestCount = 0
+            val destination = UeisDestination(
+                httpClient = clientRespondingWith(status = HttpStatusCode.OK) { requestCount++ },
+                baseUrl = "https://ueis.example.com",
+            )
+
+            val outcomes = destination.send(batch = emptyList())
+
+            assertEquals(expected = 0, actual = requestCount)
+            assertEquals(expected = emptyMap(), actual = outcomes)
+        }
+    }
+
+    @Test
+    fun sendsASingleRequestToTheBatchEndpoint() {
+        runTest {
+            var requestCount = 0
+            var requestedPath = ""
+            val destination = UeisDestination(
+                httpClient = clientRespondingWith(status = HttpStatusCode.OK) { request ->
+                    requestCount++
+                    requestedPath = request.url.encodedPath
+                },
+                baseUrl = "https://ueis.example.com",
+            )
+
+            destination.send(
+                batch = listOf(testQueuedEvent(id = "1", name = "a"), testQueuedEvent(id = "2", name = "b")),
+            )
+
+            assertEquals(expected = 1, actual = requestCount)
+            assertEquals(expected = "/v1/batch", actual = requestedPath)
+        }
+    }
+
+    @Test
+    fun sendsAnIdempotencyKeyDerivedFromTheQueuedEventIds() {
+        runTest {
+            var idempotencyKey: String? = null
+            val destination = UeisDestination(
+                httpClient = clientRespondingWith(status = HttpStatusCode.OK) { request ->
+                    idempotencyKey = request.headers["Idempotency-Key"]
+                },
+                baseUrl = "https://ueis.example.com",
+            )
+
+            destination.send(
+                batch = listOf(testQueuedEvent(id = "1", name = "a"), testQueuedEvent(id = "2", name = "b")),
+            )
+
+            assertEquals(expected = "1,2", actual = idempotencyKey)
         }
     }
 }

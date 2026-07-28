@@ -1,7 +1,9 @@
 package com.jaidensiu.orbit.destination
 
+import com.jaidensiu.orbit.queue.EventEnvelope
 import com.jaidensiu.orbit.queue.QueuedEvent
 import io.ktor.client.HttpClient
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -10,6 +12,10 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.Serializable
+
+@Serializable
+internal data class BatchEnvelope(val batch: List<EventEnvelope>)
 
 internal class UeisDestination(
     private val httpClient: HttpClient,
@@ -18,26 +24,17 @@ internal class UeisDestination(
     override val id: String = "ueis"
 
     override suspend fun send(batch: List<QueuedEvent>): Map<String, DeliveryOutcome> {
-        val outcomes = mutableMapOf<String, DeliveryOutcome>()
-        for ((index, event) in batch.withIndex()) {
-            val outcome = attempt(event = event)
-            outcomes[event.id] = outcome
-            if (outcome is DeliveryOutcome.RetryableFailure) {
-                batch.drop(n = index + 1).forEach { skipped ->
-                    outcomes[skipped.id] =
-                        DeliveryOutcome.RetryableFailure(reason = "skipped after an earlier failure in this batch")
-                }
-                break
-            }
-        }
-        return outcomes
+        if (batch.isEmpty()) return emptyMap()
+        val outcome = attempt(batch = batch)
+        return batch.associate { it.id to outcome }
     }
 
-    private suspend fun attempt(event: QueuedEvent): DeliveryOutcome {
+    private suspend fun attempt(batch: List<QueuedEvent>): DeliveryOutcome {
         return try {
-            val response = httpClient.post(urlString = "$baseUrl/v1/events") {
+            val response = httpClient.post(urlString = "$baseUrl/v1/batch") {
                 contentType(type = ContentType.Application.Json)
-                setBody(body = event.envelope)
+                header(key = "Idempotency-Key", value = idempotencyKeyFor(batch = batch))
+                setBody(body = BatchEnvelope(batch = batch.map { it.envelope }))
             }
             classify(response = response)
         } catch (e: CancellationException) {
@@ -45,6 +42,10 @@ internal class UeisDestination(
         } catch (e: Throwable) {
             DeliveryOutcome.RetryableFailure(reason = "network error: ${e.message}", cause = e)
         }
+    }
+
+    private fun idempotencyKeyFor(batch: List<QueuedEvent>): String {
+        return batch.joinToString(separator = ",") { it.id }
     }
 
     private fun classify(response: HttpResponse): DeliveryOutcome {
