@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -42,9 +43,20 @@ kotlin {
         }
     }
 
-    iosArm64()
-    iosSimulatorArm64()
-    iosX64()
+    val xcframeworkName = "OrbitCatalog"
+    val xcf = XCFramework(xcframeworkName)
+    listOf(
+        iosArm64(),
+        iosSimulatorArm64(),
+        iosX64(),
+    ).forEach { target ->
+        target.binaries.framework {
+            baseName = xcframeworkName
+            binaryOption("bundleId", "com.jaidensiu.orbit.catalog")
+            isStatic = true
+            xcf.add(this)
+        }
+    }
 
     sourceSets {
         commonMain {
@@ -88,5 +100,5 @@ publishing {
 }
 
 afterEvaluate {
-    (publishing.publications.getByName("androidRelease") as MavenPublication).artifactId = "catalog"
+    (publishing.publications.getByName("androidRelease") as MavenPublication).artifactId = "orbit-catalog"
 }

@@ -14,6 +14,13 @@ A Kotlin Multiplatform SDK that routes analytics events into the Unified Events 
   Orbit owns its own HTTP transport (Ktor) -- it does not depend on the host app's networking
   stack -- so the same reliability guarantees apply identically on Android and iOS.
 
+Published as `com.jaidensiu:orbit-catalog` / `com.jaidensiu:orbit` on Android (GitHub
+Packages), and as the `OrbitCatalog` / `Orbit` SPM products on iOS. `Orbit` already bundles
+`OrbitCatalog`'s types, so a target that calls `track()` only needs to depend on `Orbit` --
+`OrbitCatalog` is for consumers that want the event vocabulary without the delivery runtime.
+Don't depend on both from the same target: Kotlin/Native compiles each XCFramework independently,
+so `OrbitCatalog.TabClicked` and `Orbit.TabClicked` would be two unrelated Swift types.
+
 ## Usage
 
 Build one `Orbit` instance and hold it as a singleton in your own app's DI graph (Orbit does not
