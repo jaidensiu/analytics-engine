@@ -59,22 +59,23 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./gradlew -PlibraryVersion="$VERSION" \
-            :core:publishAndroidReleasePublicationToGitHubPackagesRepository \
+            :catalog:publishAndroidReleasePublicationToGitHubPackagesRepository \
+            :engine:publishAndroidReleasePublicationToGitHubPackagesRepository \
             --stacktrace
 
       - name: Build XCFramework
-        run: ./gradlew -PlibraryVersion="$VERSION" :core:assembleAnalyticsEngineReleaseXCFramework --stacktrace
+        run: ./gradlew -PlibraryVersion="$VERSION" :engine:assembleOrbitReleaseXCFramework --stacktrace
 
       - name: Zip XCFramework and compute checksum
         id: package
         run: |
-          cd core/build/XCFrameworks/release
+          cd engine/build/XCFrameworks/release
           ditto -c -k --sequesterRsrc --keepParent \
-            AnalyticsEngine.xcframework \
-            "AnalyticsEngine-$VERSION.xcframework.zip"
-          CHECKSUM=$(swift package compute-checksum "AnalyticsEngine-$VERSION.xcframework.zip")
+            Orbit.xcframework \
+            "Orbit-$VERSION.xcframework.zip"
+          CHECKSUM=$(swift package compute-checksum "Orbit-$VERSION.xcframework.zip")
           echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
-          echo "zip_path=core/build/XCFrameworks/release/AnalyticsEngine-$VERSION.xcframework.zip" >> "$GITHUB_OUTPUT"
+          echo "zip_path=engine/build/XCFrameworks/release/Orbit-$VERSION.xcframework.zip" >> "$GITHUB_OUTPUT"
 
       - name: Create draft release and upload XCFramework
         id: draft
@@ -83,11 +84,11 @@ jobs:
             -f tag_name="v$VERSION" \
             -f name="v$VERSION" \
             -F draft=true \
-            -f body="Android: \`com.jaidensiu:analytics:$VERSION\` via GitHub Packages. iOS: SPM binary target (see Package.swift at tag v$VERSION)." \
+            -f body="Android: \`com.jaidensiu:orbit:$VERSION\` (pulls in \`com.jaidensiu:catalog:$VERSION\` transitively) via GitHub Packages. iOS: SPM binary target (see Package.swift at tag v$VERSION)." \
             --jq .id)
           ASSET_ID=$(gh api --method POST \
             -H "Content-Type: application/zip" \
-            "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=AnalyticsEngine-$VERSION.xcframework.zip" \
+            "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=Orbit-$VERSION.xcframework.zip" \
             --input "${{ steps.package.outputs.zip_path }}" \
             --jq .id)
           echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
@@ -97,7 +98,7 @@ jobs:
         id: manifest
         run: |
           sed -i '' -E \
-            "s|url: \"[^\"]*\"|url: \"https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/AnalyticsEngine-$VERSION.xcframework.zip\"|" \
+            "s|url: \"[^\"]*\"|url: \"https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/Orbit-$VERSION.xcframework.zip\"|" \
             Package.swift
           sed -i '' -E \
             "s|checksum: \"[^\"]*\"|checksum: \"${{ steps.package.outputs.checksum }}\"|" \

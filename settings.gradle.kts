@@ -1,4 +1,4 @@
-rootProject.name = "analytics-engine"
+rootProject.name = "Orbit"
 
 pluginManagement {
     repositories {
@@ -32,4 +32,4 @@ dependencyResolutionManagement {
     }
 }
 
-include(":core")
+include(":catalog", ":engine")
