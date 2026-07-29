@@ -7,13 +7,15 @@ let package = Package(
         .iOS(.v15)
     ],
     products: [
+        // Event definitions only (e.g. TabClicked, WorldIdTab).
         .library(name: "OrbitCatalog", targets: ["OrbitCatalog"]),
     ],
     targets: [
         .binaryTarget(
             name: "OrbitCatalog",
-            url: "https://github.com/jaidensiu/orbit/releases/download/v0.0.5/OrbitCatalog-0.0.5.xcframework.zip",
-            checksum: "8d2be91ad906d1c3009eb3b62d92fda14d7ba847107223b03031868ddaa8153e"
+            // url/checksum are rewritten by the Publish workflow on every release.
+            url: "https://github.com/jaidensiu/orbit/releases/download/v0.0.6/OrbitCatalog-0.0.6.xcframework.zip",
+            checksum: "3ecf6ee9c2623aa9afb906abe3fbf311ea1040a1b189922f5f83717bb7083a5f"
         ),
     ]
 )
