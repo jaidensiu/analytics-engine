@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: Build and test (Android + iOS)
+    name: Build and test
     runs-on: macos-15
     timeout-minutes: 45
     steps:
