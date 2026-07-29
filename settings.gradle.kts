@@ -32,4 +32,4 @@ dependencyResolutionManagement {
     }
 }
 
-include(":catalog", ":engine")
+include(":catalog")

@@ -34,5 +34,4 @@ jobs:
           name: test-reports
           path: |
             catalog/build/reports/
-            engine/build/reports/
           retention-days: 7

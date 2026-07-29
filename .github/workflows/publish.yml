@@ -60,14 +60,12 @@ jobs:
         run: |
           ./gradlew -PlibraryVersion="$VERSION" \
             :catalog:publishAndroidReleasePublicationToGitHubPackagesRepository \
-            :engine:publishAndroidReleasePublicationToGitHubPackagesRepository \
             --stacktrace
 
       - name: Build XCFrameworks
         run: |
           ./gradlew -PlibraryVersion="$VERSION" \
             :catalog:assembleOrbitCatalogReleaseXCFramework \
-            :engine:assembleOrbitReleaseXCFramework \
             --stacktrace
 
       - name: Zip XCFrameworks and compute checksums
@@ -81,14 +79,6 @@ jobs:
           echo "catalog_checksum=$CATALOG_CHECKSUM" >> "$GITHUB_OUTPUT"
           echo "catalog_zip_path=catalog/build/XCFrameworks/release/OrbitCatalog-$VERSION.xcframework.zip" >> "$GITHUB_OUTPUT"
 
-          cd "$GITHUB_WORKSPACE/engine/build/XCFrameworks/release"
-          ditto -c -k --sequesterRsrc --keepParent \
-            Orbit.xcframework \
-            "Orbit-$VERSION.xcframework.zip"
-          ENGINE_CHECKSUM=$(swift package compute-checksum "Orbit-$VERSION.xcframework.zip")
-          echo "engine_checksum=$ENGINE_CHECKSUM" >> "$GITHUB_OUTPUT"
-          echo "engine_zip_path=engine/build/XCFrameworks/release/Orbit-$VERSION.xcframework.zip" >> "$GITHUB_OUTPUT"
-
       - name: Create draft release and upload XCFrameworks
         id: draft
         run: |
@@ -96,17 +86,12 @@ jobs:
             -f tag_name="v$VERSION" \
             -f name="v$VERSION" \
             -F draft=true \
-            -f body="Android: \`com.jaidensiu:orbit:$VERSION\` (pulls in \`com.jaidensiu:orbit-catalog:$VERSION\` transitively) via GitHub Packages. iOS: SPM binary targets \`OrbitCatalog\` and \`Orbit\` (see Package.swift at tag v$VERSION)." \
+            -f body="Android: \`com.jaidensiu:orbit-catalog:$VERSION\` via GitHub Packages. iOS: SPM binary target \`OrbitCatalog\` (see Package.swift at tag v$VERSION)." \
             --jq .id)
           gh api --method POST \
             -H "Content-Type: application/zip" \
             "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=OrbitCatalog-$VERSION.xcframework.zip" \
             --input "${{ steps.package.outputs.catalog_zip_path }}" \
-            --jq .id
-          gh api --method POST \
-            -H "Content-Type: application/zip" \
-            "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=Orbit-$VERSION.xcframework.zip" \
-            --input "${{ steps.package.outputs.engine_zip_path }}" \
             --jq .id
           echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
 
@@ -123,15 +108,8 @@ jobs:
                   .iOS(.v15)
               ],
               products: [
-                  // Event definitions only (e.g. TabClicked, WorldIdTab) -- for consumers that just need
-                  // the shared vocabulary (testing, UI code) without pulling in the delivery runtime.
-                  // \`Orbit\` already re-exposes these same types under its own module, so don't import
-                  // both in the same target: they're two independently-compiled copies, and Swift would
-                  // treat \`OrbitCatalog.TabClicked\` and \`Orbit.TabClicked\` as unrelated types.
+                  // Event definitions only (e.g. TabClicked, WorldIdTab).
                   .library(name: "OrbitCatalog", targets: ["OrbitCatalog"]),
-                  // Everything needed to send events: the catalog's event types plus the
-                  // queue/retry/transport runtime.
-                  .library(name: "Orbit", targets: ["Orbit"]),
               ],
               targets: [
                   .binaryTarget(
@@ -139,12 +117,6 @@ jobs:
                       // url/checksum are rewritten by the Publish workflow on every release.
                       url: "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/OrbitCatalog-$VERSION.xcframework.zip",
                       checksum: "${{ steps.package.outputs.catalog_checksum }}"
-                  ),
-                  .binaryTarget(
-                      name: "Orbit",
-                      // url/checksum are rewritten by the Publish workflow on every release.
-                      url: "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/Orbit-$VERSION.xcframework.zip",
-                      checksum: "${{ steps.package.outputs.engine_checksum }}"
                   ),
               ]
           )
