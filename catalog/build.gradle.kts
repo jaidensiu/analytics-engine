@@ -36,6 +36,8 @@ val generateCatalogVersion by tasks.registering {
 kotlin {
     jvmToolchain(17)
 
+    jvm()
+
     androidTarget {
         publishLibraryVariants("release")
         compilerOptions {
@@ -100,5 +102,5 @@ publishing {
 }
 
 afterEvaluate {
-    (publishing.publications.getByName("androidRelease") as MavenPublication).artifactId = "orbit-catalog"
+    (publishing.publications.getByName("kotlinMultiplatform") as MavenPublication).artifactId = "orbit-catalog"
 }
