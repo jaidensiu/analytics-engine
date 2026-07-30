@@ -102,5 +102,6 @@ publishing {
 }
 
 afterEvaluate {
-    (publishing.publications.getByName("kotlinMultiplatform") as MavenPublication).artifactId = "orbit-catalog"
+    (publishing.publications.getByName("androidRelease") as MavenPublication).artifactId = "orbit-catalog-android"
+    (publishing.publications.getByName("jvm") as MavenPublication).artifactId = "orbit-catalog-jvm"
 }

@@ -53,13 +53,14 @@ jobs:
       - name: Assemble artifacts
         run: ./gradlew assemble --stacktrace
 
-      - name: Publish Android artifacts to GitHub Packages
+      - name: Publish artifacts to GitHub Packages
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./gradlew -PlibraryVersion="$VERSION" \
             :catalog:publishAndroidReleasePublicationToGitHubPackagesRepository \
+            :catalog:publishJvmPublicationToGitHubPackagesRepository \
             --stacktrace
 
       - name: Build XCFrameworks
