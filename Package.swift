@@ -14,8 +14,8 @@ let package = Package(
         .binaryTarget(
             name: "OrbitCatalog",
             // url/checksum are rewritten by the Publish workflow on every release.
-            url: "https://github.com/jaidensiu/orbit/releases/download/v0.0.8/OrbitCatalog-0.0.8.xcframework.zip",
-            checksum: "9a79047cb393f611e8e77b0653b8469079706745e1b32b5d125ed2ea702101cb"
+            url: "https://github.com/jaidensiu/orbit/releases/download/v0.0.9/OrbitCatalog-0.0.9.xcframework.zip",
+            checksum: "0aedd298132640e53b72c45013f106a95bf96e2207933c68fd8817131a93c561"
         ),
     ]
 )
