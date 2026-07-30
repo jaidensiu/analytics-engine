@@ -59,8 +59,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./gradlew -PlibraryVersion="$VERSION" \
-            :catalog:publishAndroidReleasePublicationToGitHubPackagesRepository \
-            :catalog:publishJvmPublicationToGitHubPackagesRepository \
+            :catalog:publishAllPublicationsToGitHubPackagesRepository \
             --stacktrace
 
       - name: Build XCFrameworks
