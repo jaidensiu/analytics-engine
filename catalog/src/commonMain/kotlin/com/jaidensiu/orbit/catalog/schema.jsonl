@@ -1,17 +1,18 @@
 {
-  eventName: "some string",
+  event_name: "some string",
   properties: {
-    key1: "value1",
-    key2: "value2"
+    "key_one": "value_one",
+    "key_two": "value_two"
   },
-  timestamp: "string|null",
-  deviceId: "string|null",
-  userId: "string|null",
-  preLoginUserId: "string|null",
-  anonymizedUserId: "string|null",
-  operatingSystem: "string|null",
-  sessionId: "string|null",
-  appIdentified: "string|null",
-  appVersion: "string|null",
-  buildType: "string|null"
+  timestamp_millis: "string|null",
+  device_id: "string|null",
+  user_id: "string|null",
+  pre_login_user_id: "string|null",
+  anonymized_user_id: "string|null",
+  operating_system: "string|null",
+  session_id: "string|null",
+  app_identifier: "string|null",
+  app_version: "string|null",
+  build_type: "string|null",
+  catalog_version: "string"
 }
