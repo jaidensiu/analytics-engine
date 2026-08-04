@@ -1,0 +1,17 @@
+{
+  eventName: "some string",
+  properties: {
+    key1: "value1",
+    key2: "value2"
+  },
+  timestamp: "string|null",
+  deviceId: "string|null",
+  userId: "string|null",
+  preLoginUserId: "string|null",
+  anonymizedUserId: "string|null",
+  operatingSystem: "string|null",
+  sessionId: "string|null",
+  appIdentified: "string|null",
+  appVersion: "string|null",
+  buildType: "string|null"
+}
